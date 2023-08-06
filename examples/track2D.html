@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <base href="examples" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Track 2D Example</title>
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://cdn.jsdelivr.net/npm/three@0.155.0/+esm",
+          "lodash": "https://cdn.jsdelivr.net/npm/lodash-es@4.17.21/+esm"
+        }
+      }
+    </script>
+    <script type="module">
+      import * as TrackUtils from "../module/index.js";
+
+      let skaters = [
+        {
+          id: 1,
+          x: 0,
+          y: 5,
+          rotation: 180,
+          team: "A",
+        },
+        {
+          id: 2,
+          x: 0,
+          y: 6,
+          rotation: 180,
+          team: "A",
+        },
+        {
+          id: 3,
+          x: 0,
+          y: 7,
+          rotation: 180,
+          team: "A",
+        },
+        {
+          id: 4,
+          x: 10,
+          y: 5,
+          rotation: 180,
+          team: "A",
+          isPivot: true,
+        },
+        {
+          id: 5,
+          x: -4.5,
+          y: 5,
+          rotation: 0,
+          team: "A",
+          isJammer: true,
+        },
+        {
+          id: 6,
+          x: 2,
+          y: 5,
+          rotation: 180,
+          team: "B",
+        },
+        {
+          id: 7,
+          x: 2,
+          y: 6,
+          rotation: 180,
+          team: "B",
+        },
+        {
+          id: 8,
+          x: 2,
+          y: 7,
+          rotation: 180,
+          team: "B",
+        },
+        {
+          id: 9,
+          x: 4,
+          y: 7,
+          rotation: 180,
+          team: "B",
+          isPivot: true,
+        },
+        {
+          id: 10,
+          x: -4.5,
+          y: 7,
+          rotation: 0,
+          team: "B",
+          isJammer: true,
+        },
+      ];
+
+      skaters = TrackUtils.getSkatersWDPInBounds(skaters);
+      skaters = TrackUtils.getSkatersWDPPivotLineDistance(skaters);
+      skaters = TrackUtils.getSkatersWDPInPlayPackSkater(skaters, {
+        method: TrackUtils.PACK_MEASURING_METHODS.RECTANGLE,
+      });
+
+      function renderTrack() {
+        const TICK_WIDTH = 0.6;
+        const TICK_DISTANCE = 3.05;
+        const MEASUREMENT_RADIUS = 5.41;
+
+        const target = document.getElementById("track-markings");
+        let content = "";
+
+        /* Figure 2 */
+        /* <line x1="-5.33" x2="5.33" y1="0" y2="0" />
+              <circle cx="0" cy="0" r=".1" /> */
+        /* <circle cx="-5.33" cy="0" r=".1" />
+              <circle cx="5.33" cy="0" r=".1" /> */
+
+        /* Inner Track Boundary */
+
+        /* Figure 3 */
+        /* A: rx, ry, angle, largearc ? 1/0, clockwise ? 1/0 */
+        content += `
+                <path d="M-5.33,-3.81 A 3.81 3.81 180 1 0 -5.33,3.81" />
+                <path d="M5.33,3.81 A 3.81 3.81 180 1 0 5.33,-3.81" />
+              `;
+
+        /* Outer Track Boundary */
+
+        /* Figure 4 */
+        /* <line x1="5.33" x2="5.33" y1="0" y2="-.305" />
+              <circle cx="5.33" cy="-.305" r=".1" />
+              <circle cx="5.33" cy="0" r=".1" /> */
+        content += `
+                <path d="M5.33,7.775 A 8.08 8.08 180 0 0 5.33,-8.385" />
+              `;
+
+        /* Figure 4a */
+        /* <line x1="-5.33" x2="-5.33" y1="0" y2=".305" />
+              <circle cx="-5.33" cy=".305" r=".1" />
+              <circle cx="-5.33" cy="0" r=".1" /> */
+        content += `
+                <path d="M-5.33,-7.775 A 8.08 8.08 180 0 0 -5.33,8.385" />
+              `;
+
+        /* Figure 5 */
+        content += `
+                <path d="M5.33,3.81 L-5.33,3.81" />
+                <path d="M5.33,-3.81 L-5.33,-3.81" />
+                <path d="M5.33,7.775 L-5.33,8.385" />
+                <path d="M5.33,-8.385 L-5.33,-7.775" />
+              `;
+
+        /* Track Marker */
+
+        /* Figure 6 Pivot Line*/
+        content += `
+                <path d="M5.33,3.81 L5.33,7.775" />
+              `;
+
+        /* Figure 7 Ticks */
+        content += `
+              <path
+                d="M${5.33 - TICK_DISTANCE},${5.41 - TICK_WIDTH / 2} L${
+          5.33 - TICK_DISTANCE
+        },${5.41 + TICK_WIDTH / 2}"
+              />
+              <path
+                d="M${5.33 - 2 * TICK_DISTANCE},${5.41 - TICK_WIDTH / 2} L${
+          5.33 - 2 * TICK_DISTANCE
+        },${5.41 + TICK_WIDTH / 2}"
+              />
+              `;
+
+        /* Figure 7 Jammer Line */
+        /* get y of 5.33 - 3 * TICK_DISTANCE (outside boundary)
+                -5.33, 8.385 -> 5.33,7.775
+                m = (7.775 - 8.385) / (2*5.33)
+                8.385 = m * -5.33 + c
+                c= 8.08
+                f(x) = m * x + 8.08
+                f(5.33 - 3 * TICK_DISTANCE) = whatever
+              */
+        content += `
+                <path
+                  d="M${5.33 - 3 * TICK_DISTANCE},3.81 L${
+          5.33 - 3 * TICK_DISTANCE
+        },${((7.775 - 8.385) / (2 * 5.33)) * (5.33 - 3 * TICK_DISTANCE) + 8.08}"
+                />
+              `;
+
+        /* Figure 8 Ticks */
+        [0, 1, 2, 3].forEach((el, idx) => {
+          content += `
+                  <path
+                    key="figure-8-tick-${idx}"
+                    d="M${-5.33 + el * TICK_DISTANCE},${
+            -5.41 - TICK_WIDTH / 2
+          } L${-5.33 + el * TICK_DISTANCE},${-5.41 + TICK_WIDTH / 2}"
+                  />
+                `;
+        });
+
+        /* Figure 10 Ticks */
+        [1, 2, 3, 4, 5].forEach((el, idx) => {
+          var p1 = [5.33, 5.41 - TICK_WIDTH / 2];
+          var p2 = [5.33, 5.41 + TICK_WIDTH / 2];
+          var cR = [5.33, 0];
+          // U = 2*PI * r
+          // 3.05 = alpha * 5.41
+          var measurementRadius = MEASUREMENT_RADIUS;
+          var angle = (el * -TICK_DISTANCE) / measurementRadius; // minus because of the flipped coordinate system
+          // Rotate
+          p1 = [p1[0] - cR[0], p1[1] - cR[1]];
+          p1 = [
+            p1[0] * Math.cos(angle) - p1[1] * Math.sin(angle),
+            p1[0] * Math.sin(angle) + p1[1] * Math.cos(angle),
+          ];
+          p1 = [p1[0] + cR[0], p1[1] + cR[1]];
+          p2 = [p2[0] - cR[0], p2[1] - cR[1]];
+          p2 = [
+            p2[0] * Math.cos(angle) - p2[1] * Math.sin(angle),
+            p2[0] * Math.sin(angle) + p2[1] * Math.cos(angle),
+          ];
+          p2 = [p2[0] + cR[0], p2[1] + cR[1]];
+
+          content += `
+                  <path
+                    key="figure-10-tick-${idx}"
+                    d="M${p1[0]},${p1[1]} L${p2[0]},${p2[1]}"
+                  />
+                `;
+        });
+
+        /* Figure 11 Ticks */
+        [1, 2, 3, 4, 5].forEach((el, idx) => {
+          var p1 = [-5.33, -5.41 - TICK_WIDTH / 2];
+          var p2 = [-5.33, -5.41 + TICK_WIDTH / 2];
+          var cR = [-5.33, 0];
+          // U = 2*PI * r
+          // 3.05 = alpha * 5.41
+          var measurementRadius = 5.41;
+          var angle = (el * -TICK_DISTANCE) / measurementRadius; // minus because of the flipped coordinate system
+          // Rotate
+          p1 = [p1[0] - cR[0], p1[1] - cR[1]];
+          p1 = [
+            p1[0] * Math.cos(angle) - p1[1] * Math.sin(angle),
+            p1[0] * Math.sin(angle) + p1[1] * Math.cos(angle),
+          ];
+          p1 = [p1[0] + cR[0], p1[1] + cR[1]];
+          p2 = [p2[0] - cR[0], p2[1] - cR[1]];
+          p2 = [
+            p2[0] * Math.cos(angle) - p2[1] * Math.sin(angle),
+            p2[0] * Math.sin(angle) + p2[1] * Math.cos(angle),
+          ];
+          p2 = [p2[0] + cR[0], p2[1] + cR[1]];
+
+          content += `
+                  <path
+                    key="figure-11-tick-${idx}"
+                    d="M${p1[0]},${p1[1]} L${p2[0]},${p2[1]}"
+                  />
+                `;
+        });
+
+        /* Outside Track */
+        content += `
+                <g class="outsideOfficiatingBoundary">
+                  <path
+                    d="M5.33,${7.775 + 3.05} A ${8.08 + 3.05} ${
+          8.08 + 3.05
+        } 180 1 0 5.33,${-8.385 - 3.05}"
+                  />
+                  <path
+                    d="M-5.33,${-7.775 - 3.05} A ${8.08 + 3.05} ${
+          8.08 + 3.05
+        } 180 1 0 -5.33,${8.385 + 3.05}"
+                  />
+                  /* Line closure, top then bottom */
+                  <path d="M-5.33,${-7.775 - 3.05} L5.33,${-8.385 - 3.05}" />
+                  <path d="M5.33,${7.775 + 3.05} L-5.33,${+8.385 + 3.05}" />
+                </g>
+              `;
+
+        /* Measurement Line */
+        /* <path
+                class="measurementLine"
+                d={`M-5.33,-${MEASUREMENT_RADIUS} A ${MEASUREMENT_RADIUS} ${MEASUREMENT_RADIUS} 180 1 0 -5.33,${MEASUREMENT_RADIUS}`}
+              />
+              <path
+                class="measurementLine"
+                d={`M5.33,${MEASUREMENT_RADIUS} A ${MEASUREMENT_RADIUS} ${MEASUREMENT_RADIUS} 180 1 0 5.33,-${MEASUREMENT_RADIUS}`}
+              />
+              <path
+                class="measurementLine"
+                d={`M5.33,${MEASUREMENT_RADIUS} L-5.33,${MEASUREMENT_RADIUS}`}
+              />
+              <path
+                class="measurementLine"
+                d={`M5.33,-${MEASUREMENT_RADIUS} L-5.33,-${MEASUREMENT_RADIUS}`}
+              /> */
+
+        target.innerHTML = content;
+      }
+
+      function renderTrackPackMarkings(skaters) {
+        let content = "";
+
+        let intersectionsEngagementZoneRectangle;
+        let packIntersectionsRectangle;
+        let frontPackRectangleIntersections;
+        let backPackRectangleIntersections;
+        let frontEngagementZoneRectangles;
+        let backEngagementZoneRectangles;
+        let closestBlockerRectangles = [];
+
+        const packRectangle = TrackUtils.getPack(skaters, {
+          method: TrackUtils.PACK_MEASURING_METHODS.RECTANGLE,
+        });
+        const packBoundsRectangle =
+          TrackUtils.getSortedPackBoundaries(packRectangle);
+
+        if (!packRectangle) return console.log("not a pack situation");
+
+        /* engagement zone rectangle method */
+        const sortedOutermostSkatersRectangle =
+          TrackUtils.getSortedOutermostSkaters(packRectangle);
+        intersectionsEngagementZoneRectangle = sortedOutermostSkatersRectangle
+          ? [
+              TrackUtils.getEngagementZoneIntersectionsRectangle(
+                sortedOutermostSkatersRectangle[0],
+                {
+                  front: false,
+                }
+              ),
+              TrackUtils.getEngagementZoneIntersectionsRectangle(
+                sortedOutermostSkatersRectangle[1],
+                {
+                  front: true,
+                }
+              ),
+            ]
+          : null;
+        const twoOutermostSkatersInBothDirections =
+          TrackUtils.getTwoOutermostSkatersInBothDirection(packRectangle);
+
+        const _packIntersectionsRectangle =
+          TrackUtils.getPackIntersectionsRectangle(
+            packRectangle,
+            twoOutermostSkatersInBothDirections
+          );
+        packIntersectionsRectangle = _packIntersectionsRectangle
+          ? [
+              _packIntersectionsRectangle.back,
+              _packIntersectionsRectangle.front,
+            ]
+          : null;
+
+        /* engagement zone end rectangles */
+        const _frontPointOnEnd =
+          TrackUtils.getPointOnParallelLineOfLastSkaterRectangle(
+            sortedOutermostSkatersRectangle[1]
+          );
+        _frontPointOnEnd.pivotLineDist =
+          TrackUtils.getPivotLineDistance(_frontPointOnEnd);
+        const _frontEngagementZoneRectangles =
+          TrackUtils.getPackIntersectionsRectangle([
+            _frontPointOnEnd,
+            sortedOutermostSkatersRectangle[1],
+          ]);
+        frontEngagementZoneRectangles = _frontEngagementZoneRectangles
+          ? [
+              _frontEngagementZoneRectangles.back,
+              _frontEngagementZoneRectangles.front,
+            ]
+          : null;
+        const _backPointOnEnd =
+          TrackUtils.getPointOnParallelLineOfLastSkaterRectangle(
+            sortedOutermostSkatersRectangle[0],
+            { front: false }
+          );
+        _backPointOnEnd.pivotLineDist =
+          TrackUtils.getPivotLineDistance(_backPointOnEnd);
+        const _backEngagementZoneRectangles =
+          TrackUtils.getPackIntersectionsRectangle([
+            _backPointOnEnd,
+            sortedOutermostSkatersRectangle[0],
+          ]);
+        backEngagementZoneRectangles = _backEngagementZoneRectangles
+          ? [
+              _backEngagementZoneRectangles.back,
+              _backEngagementZoneRectangles.front,
+            ]
+          : null;
+
+        content += renderPartialTrackShape({
+          bounds: intersectionsEngagementZoneRectangle,
+          engagementZone: true,
+        });
+
+        content += renderPartialTrackShape({
+          bounds: packIntersectionsRectangle,
+          pack: true,
+        });
+
+        document.getElementById("track-pack-markings").innerHTML = content;
+      }
+
+      function renderPartialTrackShape({ bounds, engagementZone, pack, box }) {
+        if (!bounds) return "";
+        if (
+          !bounds[0].inside ||
+          !bounds[0].outside ||
+          !bounds[1].inside ||
+          !bounds[1].outside
+        ) {
+          console.warn("bounds missing intersections");
+          return "";
+        }
+        return `
+                <g>
+                  <g
+                    class="${[
+                      pack ? "packRectangle" : "",
+                      engagementZone ? "engagementZone" : "",
+                      box ? "box" : "",
+                    ].join(" ")}"
+                  >
+                    <path
+                      d="${TrackUtils.computePartialTrackShape2D({
+                        p1: bounds[0],
+                        p2: bounds[1],
+                        method: TrackUtils.PACK_MEASURING_METHODS.RECTANGLE,
+                      })}"
+                    />
+                  </g>
+                </g>
+              `;
+      }
+
+      function renderSkaters(skaters) {
+        let content = "";
+
+        const hslToString = ({ h, s, l }) => {
+          return `hsl(${h}, ${s * 100}%, ${l * 100}%)`;
+        };
+
+        skaters.forEach((skater) => {
+          let {
+            team,
+            rotation,
+            idx,
+            isPivot = false,
+            isJammer = false,
+            inBounds = false,
+            inPlay = false,
+            packSkater = false,
+            x,
+            y,
+          } = skater;
+          const teamColor =
+            team === "A"
+              ? {
+                  h: 0,
+                  s: 0.7345971563981044,
+                  l: 0.4137254901960784,
+                  a: 1,
+                }
+              : {
+                  h: 122.79069767441861,
+                  s: 0.43434343434343436,
+                  l: 0.38823529411764707,
+                  a: 1,
+                };
+
+          content += `
+                  <g
+                    class="skater ${[
+                      team === "A" ? "skater-A" : "skater-B",
+                      inBounds ? "skater--in-bounds" : "",
+                      inPlay ? "skater--in-play" : "",
+                    ].join(" ")}"
+                  >
+                    <g
+                      class="js-skater"
+                      transform="${`translate(${x},${y})`}"
+                    >
+                      <g
+                        class="js-skater-rotation-wrapper"
+                        transform="${`rotate(${rotation})`}"
+                      >
+                        <g class="js-skater-body-wrapper">
+                          <path class="shield" d="M.1,.3 A.3 .3 90 1 0 .1,-.3" />
+                          <circle
+                            class="skaterBackground"
+                            style="
+                              fill: ${hslToString(teamColor)}
+                            "
+                            r=".3"
+                          />
+                          ${
+                            isPivot
+                              ? `
+                            <path
+                              d="${`M${-0.3},0 L ${0.3},0`}"
+                              style="stroke: ${
+                                teamColor.l > 0.7 ? "#000" : "#fff"
+                              };
+                                stroke-width: 0.15;
+                                pointer-events: none;"
+                            />
+                            <circle
+                              r="0.3"
+                              style="stroke: var(--skater-rim-color, #000);
+                                stroke-width: 0.05;
+                                fill: none;"
+                            />
+                          `
+                              : ""
+                          }
+                          ${
+                            isJammer
+                              ? `
+                            <g>
+                              <path
+                                d="m55,237 74-228 74,228L9,96h240"
+                                transform="translate(-0.23,-0.23) scale(0.0018)"
+                                style="
+                                  fill: ${teamColor.l > 0.7 ? "#000" : "#fff"};
+                                  pointer-events: none;"
+                              />
+                            </g>
+                          `
+                              : ""
+                          }
+                          <g
+                            class="statusWrapper js-status-icon"
+                            transform="${`rotate(${-rotation})`}"
+                          >
+                            <g transform="translate(.22, -.22)">
+                              <text
+                                class="status statusOutOfPlay"
+                                text-anchor="start"
+                                font-size=".35"
+                                x="0"
+                                y="0"
+                              >
+                                OOP
+                              </text>
+                              <text
+                                class="status statusOutOfBounds"
+                                text-anchor="start"
+                                font-size=".35"
+                                x="0"
+                                y="0"
+                              >
+                                OOB
+                              </text>
+                            </g>
+                          </g>
+                        </g>
+                      </g>
+                    </g>
+                  </g>
+                `;
+        });
+
+        document.getElementById("skaters").innerHTML = content;
+      }
+
+      renderTrack();
+      renderTrackPackMarkings(skaters);
+      renderSkaters(skaters);
+    </script>
+    <style>
+      .outsideOfficiatingBoundary path {
+        stroke: #cecece;
+        fill: none;
+        stroke-width: 0.07;
+        stroke-dasharray: 0.18 0.12;
+      }
+      .measurementLine {
+        stroke: red !important;
+        fill: none;
+        stroke-width: 0.07;
+        stroke-dasharray: 0.18 0.12;
+      }
+      .svg {
+        max-height: 100vh;
+        height: 100%;
+        width: 100%;
+        display: block;
+        pointer-events: all;
+      }
+
+      .svg > g > circle {
+        fill: #fff;
+        stroke: #000;
+        stroke-width: 0.07;
+      }
+
+      .svg > g > circle.current {
+        stroke: #f3a5c9;
+      }
+
+      .svg > g > line {
+        stroke: #000;
+        stroke-width: 0.07;
+      }
+
+      .svg > g > line.current {
+        stroke: #f3a5c9;
+      }
+
+      .svg > g > path {
+        fill: none;
+        stroke-width: 0.07;
+        stroke: #000;
+      }
+
+      .svg > g > path.current {
+        stroke: #f3a5c9;
+      }
+
+      .pack path {
+        stroke: transparentize(#ffa489, 0.2);
+        stroke-width: 0.05;
+        fill: transparentize(#ffa489, 0.5);
+      }
+
+      .pack--overlay path {
+        stroke: #6803ff;
+        opacity: 0.4;
+        stroke-width: 0.05;
+        fill: url(#pack-pattern);
+      }
+
+      .box path {
+        stroke: #333467;
+        stroke-width: 0.05;
+        fill: none;
+      }
+
+      .engagementZone path {
+        stroke: color-mix(in srgb, #ffa489 40%, transparent);
+        stroke-width: 0.05;
+        fill: color-mix(in srgb, #ffa489 70%, transparent);
+      }
+
+      .packRectangle path {
+        stroke: color-mix(in srgb, #ffa489 20%, transparent);
+        stroke-width: 0.05;
+        fill: color-mix(in srgb, #ffa489 50%, transparent);
+      }
+
+      .skater-A .skaterBackground {
+        stroke: #000;
+        stroke-width: 0.05;
+      }
+
+      .skater-B .skaterBackground {
+        stroke: #000;
+        stroke-width: 0.05;
+      }
+
+      .blockerNumber {
+        font-family: Arial, sans-serif;
+      }
+
+      .statusWrapper {
+        pointer-events: none;
+      }
+
+      .status {
+        display: none;
+        filter: drop-shadow(0, 0, 0.2, #fff);
+      }
+
+      .skater {
+        pointer-events: all;
+      }
+
+      .skater .rotationHandle {
+        display: none;
+        cursor: pointer;
+      }
+
+      .skater--in-bounds:not(.skater--in-play) .statusOutOfPlay {
+        display: initial;
+        fill: #f00;
+      }
+
+      .skater:not(.skater--in-bounds) .statusOutOfBounds {
+        display: initial;
+        fill: #f00;
+      }
+
+      .shield {
+        fill: none;
+        stroke: #000;
+        stroke-width: 0.04;
+
+        pointer-events: none;
+      }
+    </style>
+  </head>
+  <body>
+    <svg
+      class="svg"
+      viewBox="-17,-12 34,24"
+      preserveAspectRatio="xMidYMid meet"
+    >
+      <g id="track-pack-markings"></g>
+      <g id="track-markings"></g>
+      <g id="skaters"></g>
+    </svg>
+  </body>
+</html>

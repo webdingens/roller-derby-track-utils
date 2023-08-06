@@ -1,0 +1,35 @@
+{
+  "name": "roller-derby-track-utils",
+  "version": "1.0.0",
+  "description": "Various computations for displaying roller derby track data",
+  "main": "index.js",
+  "module": "src/index.js",
+  "types": "module.d.ts",
+  "type": "module",
+  "scripts": {
+    "build-module": "cross-env BABEL_ENV=module babel src -d module -s --copy-files",
+    "build-node": "babel src -d dist -s --copy-files",
+    "build": "npm run build-node && npm run build-module",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "Roller Derby",
+    "Track"
+  ],
+  "author": "webdingens",
+  "license": "Unlicense",
+  "peerDependencies": {
+    "lodash": "*",
+    "three": "*"
+  },
+  "devDependencies": {
+    "@babel/cli": "^7.21.5",
+    "@babel/core": "^7.22.1",
+    "@babel/preset-env": "^7.22.4",
+    "cross-env": "^7.0.3"
+  },
+  "compilerOptions": {
+    "target": "es6"
+  },
+  "browserslist": "> 0.25%, not dead"
+}
