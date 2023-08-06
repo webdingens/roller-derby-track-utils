@@ -1,6 +1,6 @@
 {
   "name": "roller-derby-track-utils",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Various computations for displaying roller derby track data",
   "main": "index.js",
   "module": "src/index.js",

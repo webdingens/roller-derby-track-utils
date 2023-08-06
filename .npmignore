@@ -1,3 +1,2 @@
 .vscode
-dist
-module
+node_modules
